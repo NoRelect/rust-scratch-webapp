@@ -7,7 +7,7 @@ COPY app/Cargo.toml /app/Cargo.toml
 COPY app/Cargo.lock /app/Cargo.lock
 RUN cargo build --release --target x86_64-unknown-linux-musl
 
-COPY app /app
+COPY app/ /app
 RUN cargo build --release --target x86_64-unknown-linux-musl
 
 FROM scratch

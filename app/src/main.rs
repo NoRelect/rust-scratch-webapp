@@ -9,7 +9,13 @@ async fn main() {
     let routes = health_route.with(warp::cors().allow_any_origin());
 
     println!("Server listening on :8000");
-    warp::serve(routes).run(([0, 0, 0, 0], 8000)).await;
+    let (_addr, fut) = warp::serve(routes).bind_with_graceful_shutdown(([0, 0, 0, 0], 8000), async move {
+            tokio::signal::ctrl_c()
+                .await
+                .expect("Failed to wait for CTRL+C");
+        });
+    fut.await;
+    println!("Server stopping...");
 }
 
 async fn health_handler() -> Result<impl Reply> {
