@@ -1,23 +1,42 @@
-use warp::{Filter, Rejection, Reply};
-
-type Result<T> = std::result::Result<T, Rejection>;
+use axum::{Router, routing::get};
+use tokio::signal;
 
 #[tokio::main]
 async fn main() {
-    let health_route = warp::path!("health").and_then(health_handler);
+    tracing_subscriber::fmt::init();
 
-    let routes = health_route.with(warp::cors().allow_any_origin());
+    let app = Router::new().route("/", get(root));
 
-    println!("Server listening on :8000");
-    let (_addr, fut) = warp::serve(routes).bind_with_graceful_shutdown(([0, 0, 0, 0], 8000), async move {
-            tokio::signal::ctrl_c()
-                .await
-                .expect("Failed to wait for CTRL+C");
-        });
-    fut.await;
-    println!("Server stopping...");
+    let listener = tokio::net::TcpListener::bind("[::]:8000").await.unwrap();
+    println!("Starting server on :8000");
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .unwrap();
+    println!("Stopping server...");
 }
 
-async fn health_handler() -> Result<impl Reply> {
-    Ok("OK")
+// basic handler that responds with a static string
+async fn root() -> &'static str {
+    "Hello, World!"
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
 }
