@@ -10,4 +10,4 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 FROM scratch
 COPY --from=builder /app/app /app
 USER 1000
-CMD ["/app" ]
+ENTRYPOINT [ "/app" ]
